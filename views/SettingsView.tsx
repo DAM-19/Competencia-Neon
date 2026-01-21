@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
+import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface SettingsViewProps {
   user: User;
@@ -14,26 +16,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdate }) => {
     themeColor: user.themeColor || 'purple'
   });
 
+  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  const handleSave = () => {
-    onUpdate(formData);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const userRef = doc(db, "users", user.id);
+      await updateDoc(userRef, formData);
+      onUpdate(formData);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (error) {
+      console.error("Error al guardar en Firestore:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Previsualización inmediata del tema al hacer clic
   const handleThemeChange = (color: 'blue' | 'purple' | 'green') => {
     setFormData({...formData, themeColor: color});
-    // Opcional: Podríamos llamar a onUpdate aquí para feedback instantáneo en toda la app
-    onUpdate({...user, themeColor: color});
   };
 
   return (
     <div className="max-w-4xl space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Profile Details */}
         <div className="lg:col-span-2 glass-card rounded-2xl p-8 border border-white/10">
           <h3 className="font-orbitron font-bold text-white uppercase tracking-widest mb-6 border-b border-white/5 pb-4">Identidad del Operador</h3>
           
@@ -53,8 +61,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdate }) => {
                 <input 
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:border-theme outline-none transition-all font-rajdhani"
+                  readOnly
+                  className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-gray-500 outline-none font-rajdhani cursor-not-allowed"
                 />
               </div>
             </div>
@@ -89,33 +97,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdate }) => {
 
             <button 
               onClick={handleSave}
+              disabled={isSaving}
               className={`w-full py-4 rounded-xl font-orbitron font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2
                 ${isSaved ? 'bg-neon-green text-black' : 'bg-theme text-black hover:brightness-110 shadow-lg shadow-theme/20'}`}
             >
-              <i className={`fas ${isSaved ? 'fa-sync-alt fa-spin' : 'fa-save'}`}></i>
-              {isSaved ? 'SINCRONIZANDO...' : 'ACTUALIZAR NÚCLEO'}
+              <i className={`fas ${isSaving ? 'fa-sync-alt fa-spin' : isSaved ? 'fa-check' : 'fa-save'}`}></i>
+              {isSaving ? 'GUARDANDO...' : isSaved ? 'SINCRONIZADO' : 'ACTUALIZAR NÚCLEO'}
             </button>
           </div>
         </div>
 
-        {/* Status Box */}
         <div className="space-y-6">
           <div className="glass-card rounded-2xl p-6 border border-white/5 relative overflow-hidden">
-            <div className={`absolute inset-0 bg-theme/5 opacity-20`}></div>
-            <h3 className="font-orbitron font-bold text-white uppercase text-[10px] mb-4 tracking-widest relative">BIO-MÉTRICAS DE RED</h3>
-            <div className="space-y-4 relative">
-              <div className="flex justify-between items-center text-xs">
+            <h3 className="font-orbitron font-bold text-white uppercase text-[10px] mb-4 tracking-widest">BIO-MÉTRICAS DE RED</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-xs font-rajdhani">
                 <span className="text-gray-500">Latencia de Enlace</span>
                 <span className="text-neon-green">14ms</span>
               </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-gray-500">Cifrado de Sesión</span>
-                <span className="text-white">AES-4096-QUBIT</span>
+              <div className="flex justify-between items-center text-xs font-rajdhani">
+                <span className="text-gray-500">ID Único</span>
+                <span className="text-white text-[8px] font-mono">{user.id}</span>
               </div>
               <div className="pt-4">
-                <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Seguridad del Perfil</p>
+                <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Integridad del Perfil</p>
                 <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="bg-neon-green h-full w-[95%]"></div>
+                  <div className="bg-neon-green h-full w-[95%] shadow-[0_0_5px_#39ff14]"></div>
                 </div>
               </div>
             </div>
