@@ -35,8 +35,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
+      try {
+        if (firebaseUser) {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
             setUser(userDoc.data() as User);
@@ -51,47 +51,61 @@ const App: React.FC = () => {
               themeColor: "purple",
             });
           }
-          setView("dashboard");
-        } catch (e) {
-          console.error(e);
+        } else {
+          setUser(null);
+          setView("dashboard"); // Reset view when logout
         }
-      } else {
-        setUser(null);
+      } catch (e) {
+        console.error("Firebase Sync Error:", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsub();
   }, []);
 
   const handleLogout = async () => {
+    setLoading(true);
     await signOut(auth);
   };
 
-  const updateTeam = (teamId: string, newData: Partial<Team>) => {
-    setTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...newData } : t));
+  const themeColors = {
+    purple: "#bc13fe",
+    blue: "#00f2ff",
+    green: "#39ff14",
   };
+
+  const themeColor = themeColors[user?.themeColor || "purple"];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-base flex items-center justify-center text-white">
-        Cargando…
+      <div className="min-h-screen bg-dark-base flex items-center justify-center flex-col gap-4">
+        <div className="w-12 h-12 border-4 border-neon-purple border-t-transparent rounded-full animate-spin shadow-[0_0_15px_#bc13fe]"></div>
+        <p className="font-orbitron text-xs text-neon-purple animate-pulse uppercase tracking-[0.3em]">Sincronizando con el Núcleo...</p>
       </div>
     );
   }
 
-  // 🔥 AQUÍ ESTABA EL ERROR: ahora sí se renderiza AuthView
   if (!user) {
     return <AuthView />;
   }
 
   return (
     <div className="flex min-h-screen bg-dark-base text-gray-200">
+      <style>{`
+        :root {
+          --neon-primary: ${themeColor};
+          --neon-glow: ${themeColor}44;
+        }
+        .text-theme { color: var(--neon-primary); }
+      `}</style>
+
       <Sidebar currentView={view} setView={setView} onLogout={handleLogout} />
 
-      <main className="flex-1 lg:ml-64 p-6 overflow-y-auto">
+      <main className="flex-1 lg:ml-64 p-6 overflow-y-auto pb-24 lg:pb-6">
         {view === "dashboard" && <DashboardView user={user} teams={teams} />}
-        {view === "teams" && <TeamsView teams={teams} user={user} onUpdateTeam={updateTeam} />}
+        {view === "teams" && <TeamsView teams={teams} user={user} onUpdateTeam={(id, data) => setTeams(prev => prev.map(t => t.id === id ? {...t, ...data} : t))} />}
         {view === "proposals" && <ProposalsView user={user} />}
         {view === "awards" && <AwardsView user={user} achievements={INITIAL_ACHIEVEMENTS} />}
         {view === "settings" && <SettingsView user={user} onUpdate={(d) => setUser(u => u ? { ...u, ...d } : null)} />}
