@@ -46,5 +46,10 @@ export interface Achievement {
   description: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
-
-export type View = 'auth' | 'dashboard' | 'teams' | 'proposals' | 'awards' | 'settings' | 'projects';
+export type View =
+  | 'dashboard'
+  | 'teams'
+  | 'proposals'
+  | 'awards'
+  | 'settings'
+  | 'projects';

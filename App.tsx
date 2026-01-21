@@ -29,7 +29,7 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<View>("auth");
+  const [view, setView] = useState<View>("dashboard");
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [loading, setLoading] = useState(true);
 
@@ -120,9 +120,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user && view === "auth") {
-    return <AuthView />;
-  }
+
 
   return (
     <div className="flex min-h-screen bg-dark-base text-gray-200">
