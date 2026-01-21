@@ -34,18 +34,14 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Escuchar cambios de autenticación
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setLoading(true);
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
-            const userData = userDoc.data() as User;
-            setUser(userData);
+            setUser(userDoc.data() as User);
           } else {
-            // Fallback robusto si el documento no existe aún
-            const fallbackUser: User = {
+            setUser({
               id: firebaseUser.uid,
               name: firebaseUser.displayName ?? "Operador",
               email: firebaseUser.email ?? "",
@@ -53,113 +49,53 @@ const App: React.FC = () => {
               rank: 999,
               achievements: [],
               themeColor: "purple",
-            };
-            setUser(fallbackUser);
+            });
           }
           setView("dashboard");
-        } catch (error) {
-          console.error("Error crítico de sincronización:", error);
-        } finally {
-          setLoading(false);
+        } catch (e) {
+          console.error(e);
         }
       } else {
         setUser(null);
-        setView("auth");
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsub();
   }, []);
 
   const handleLogout = async () => {
-    setLoading(true);
     await signOut(auth);
   };
 
   const updateTeam = (teamId: string, newData: Partial<Team>) => {
-    setTeams((prev) =>
-      prev.map((t) => (t.id === teamId ? { ...t, ...newData } : t))
-    );
+    setTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...newData } : t));
   };
-
-  const getViewTitle = (v: View) => {
-    switch (v) {
-      case "dashboard": return "Zona de Combate";
-      case "teams": return "Facciones";
-      case "proposals": return "Planos Maestros";
-      case "awards": return "Salón de la Fama";
-      case "settings": return "Núcleo de Configuración";
-      case "projects": return "Archivos de Misión";
-      default: return "";
-    }
-  };
-
-  const themeColors = {
-    purple: "#bc13fe",
-    blue: "#00f2ff",
-    green: "#39ff14",
-  };
-
-  const themeColor = themeColors[user?.themeColor || "purple"];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-base flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-20 h-20">
-            <div className="absolute inset-0 border-4 border-neon-purple/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-neon-purple border-t-transparent rounded-full animate-spin shadow-[0_0_20px_#bc13fe]"></div>
-          </div>
-          <div className="text-center">
-            <p className="font-orbitron text-[10px] text-neon-purple animate-pulse uppercase tracking-[0.5em] mb-2">Sincronizando</p>
-            <p className="font-rajdhani text-xs text-gray-500 uppercase tracking-widest">Protocolo NEON-CORE v1.0.4</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-dark-base flex items-center justify-center text-white">
+        Cargando…
       </div>
     );
   }
 
-
+  // 🔥 AQUÍ ESTABA EL ERROR: ahora sí se renderiza AuthView
+  if (!user) {
+    return <AuthView />;
+  }
 
   return (
     <div className="flex min-h-screen bg-dark-base text-gray-200">
-      <style>{`
-        :root {
-          --neon-primary: ${themeColor};
-          --neon-glow: ${themeColor}44;
-        }
-        .text-theme { color: var(--neon-primary); }
-      `}</style>
-
       <Sidebar currentView={view} setView={setView} onLogout={handleLogout} />
 
       <main className="flex-1 lg:ml-64 p-6 overflow-y-auto">
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold font-orbitron text-theme uppercase tracking-widest neon-text-glow">
-              {getViewTitle(view)}
-            </h1>
-            <p className="text-gray-400 font-rajdhani">
-              Enlace activo: <span className="text-theme font-bold">{user?.name}</span>
-            </p>
-          </div>
-
-          <img
-            src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${user?.name}`}
-            className="w-12 h-12 rounded-full border-2 border-theme shadow-lg shadow-theme/20"
-            alt="User Avatar"
-          />
-        </header>
-
-        <div className="animate-fade-in">
-          {view === "dashboard" && user && <DashboardView user={user} teams={teams} />}
-          {view === "teams" && user && <TeamsView teams={teams} user={user} onUpdateTeam={updateTeam} />}
-          {view === "proposals" && user && <ProposalsView user={user} />}
-          {view === "awards" && user && <AwardsView user={user} achievements={INITIAL_ACHIEVEMENTS} />}
-          {view === "settings" && user && <SettingsView user={user} onUpdate={(data) => setUser(prev => prev ? {...prev, ...data} : null)} />}
-          {view === "projects" && user && <ProjectsView user={user} />}
-        </div>
+        {view === "dashboard" && <DashboardView user={user} teams={teams} />}
+        {view === "teams" && <TeamsView teams={teams} user={user} onUpdateTeam={updateTeam} />}
+        {view === "proposals" && <ProposalsView user={user} />}
+        {view === "awards" && <AwardsView user={user} achievements={INITIAL_ACHIEVEMENTS} />}
+        {view === "settings" && <SettingsView user={user} onUpdate={(d) => setUser(u => u ? { ...u, ...d } : null)} />}
+        {view === "projects" && <ProjectsView user={user} />}
       </main>
 
       <ChatBot context={{ user, teams }} />
