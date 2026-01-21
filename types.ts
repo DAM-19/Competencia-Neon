@@ -7,6 +7,7 @@ export interface User {
   rank: number;
   teamId?: string;
   achievements: string[];
+  themeColor?: 'blue' | 'purple' | 'green';
 }
 
 export interface Team {
@@ -16,6 +17,16 @@ export interface Team {
   score: number;
   rank: number;
   motto: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  type: 'solo' | 'team';
+  status: 'deployed' | 'in-progress' | 'archived';
+  date: string;
+  techStack: string[];
 }
 
 export interface Proposal {
@@ -36,4 +47,4 @@ export interface Achievement {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
-export type View = 'auth' | 'dashboard' | 'teams' | 'proposals' | 'awards';
+export type View = 'auth' | 'dashboard' | 'teams' | 'proposals' | 'awards' | 'settings' | 'projects';
